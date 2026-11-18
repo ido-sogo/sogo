@@ -1,0 +1,4 @@
+project_id = "school-portal"
+
+[functions.sogo]
+verify_jwt = false

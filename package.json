@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "deploy:supabase:assets": "node scripts/deploy-static.js"
   },
   "dependencies": {
     "@supabase/server": "^1.9.2",

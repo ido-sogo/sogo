@@ -1,6 +1,11 @@
 'use strict';
 
 document.addEventListener('DOMContentLoaded', () => {
+    const apiBaseUrl = location.hostname.endsWith('.supabase.co')
+        ? '/functions/v1/sogo'
+        : location.hostname === 'ido-sogo.github.io'
+            ? 'https://ppwyjyfuexndkekmhfwn.supabase.co/functions/v1/sogo'
+            : '';
     const state = {
         config: null,
         user: null,
@@ -814,14 +819,16 @@ document.addEventListener('DOMContentLoaded', () => {
     async function request(url, method = 'GET', body) {
         let response;
         try {
-            response = await fetch(url, {
+            response = await fetch(`${apiBaseUrl}${url}`, {
                 method,
-                credentials: 'same-origin',
+                credentials: 'include',
                 headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
                 body: body === undefined ? undefined : JSON.stringify(body)
             });
         } catch {
-            throw new Error('サーバーに接続できません。プロジェクトで npm start を実行してください。');
+            throw new Error(apiBaseUrl
+                ? 'Supabaseのサーバーに接続できません。'
+                : 'サーバーに接続できません。プロジェクトで npm start を実行してください。');
         }
 
         let result;
