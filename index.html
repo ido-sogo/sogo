@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#183c32">
+    <meta name="description" content="グループごとの予定、完了報告、外出予定を管理する学校ポータルです。">
+    <title>2D 学級総合 | ログイン</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+</head>
+<body>
+    <main class="auth-shell" id="auth-view">
+        <section class="auth-intro">
+            <a class="brand brand-light" href="/" aria-label="2D 学級総合">
+                <span class="brand-mark" aria-hidden="true">S</span>
+                <span class="brand-copy">
+                    <strong>2D 学級総合</strong>
+                    <small>SCHOOL INFORMATION</small>
+                </span>
+            </a>
+            <div>
+                <p class="eyebrow">SCHOOL LIFE, ORGANIZED</p>
+                <h1>予定を共有して、<br>毎日をスムーズに。</h1>
+                <p>グループの提出期限や外出予定を、カレンダーで確認できます。</p>
+            </div>
+            <p class="auth-footnote">グループ予定管理ポータル</p>
+        </section>
+
+        <section class="auth-card" aria-label="アカウント">
+            <div class="auth-tabs" role="tablist" aria-label="ログインまたはアカウント作成">
+                <button class="auth-tab active" type="button" id="login-tab" role="tab"
+                    aria-selected="true" aria-controls="login-panel">ログイン</button>
+                <button class="auth-tab" type="button" id="register-tab" role="tab"
+                    aria-selected="false" aria-controls="register-panel">新規登録</button>
+            </div>
+            <p class="status auth-status" id="auth-status" role="status" aria-live="polite"></p>
+            <p class="setup-note" id="database-setup-notice" hidden>
+                Supabaseの接続情報が未設定です。READMEの手順で.envを設定し、サーバーを再起動してください。
+            </p>
+
+            <form id="login-panel" class="auth-form" autocomplete="on">
+                <h2>おかえりなさい</h2>
+                <p class="form-intro">登録したアカウントでログインしてください。</p>
+                <div class="form-field">
+                    <label for="login-username">ユーザー名</label>
+                    <input id="login-username" name="username" autocomplete="username"
+                        minlength="3" maxlength="32" required>
+                </div>
+                <div class="form-field">
+                    <label for="login-password">パスワード</label>
+                    <input id="login-password" name="password" type="password"
+                        autocomplete="current-password" required>
+                </div>
+                <button class="primary-button full-width" type="submit" disabled>ログイン</button>
+            </form>
+
+            <form id="register-panel" class="auth-form" autocomplete="on" hidden>
+                <h2>アカウントを作成</h2>
+                <p class="form-intro">一般利用者は登録後に所属グループを変更できません。</p>
+                <p class="setup-note" id="staff-setup-notice" hidden>
+                    総合係登録を使うには、管理者がサーバーに総合係用パスワードを設定してください。
+                </p>
+                <div class="form-field">
+                    <label for="register-username">ユーザー名</label>
+                    <input id="register-username" name="username" autocomplete="username"
+                        minlength="3" maxlength="32" pattern="[A-Za-z0-9._\\x2d]{3,32}"
+                        aria-describedby="username-help" required>
+                    <small class="field-help" id="username-help">半角英数字と . _ - の3〜32文字</small>
+                </div>
+                <div class="form-field">
+                    <label for="register-password">パスワード</label>
+                    <input id="register-password" name="password" type="password"
+                        autocomplete="new-password" minlength="10" maxlength="128" required>
+                    <small class="field-help">10文字以上で設定してください。</small>
+                </div>
+                <div class="form-field">
+                    <label for="register-role">利用者区分</label>
+                    <select id="register-role" name="role">
+                        <option value="member">一般利用者</option>
+                        <option value="staff">総合係</option>
+                    </select>
+                </div>
+                <div class="form-field" id="register-group-field">
+                    <label for="register-group">所属グループ</label>
+                    <select id="register-group" name="group" required>
+                        <option value="" selected disabled>グループを選択</option>
+                    </select>
+                </div>
+                <div class="form-field" id="staff-password-field" hidden>
+                    <label for="staff-password">総合係用パスワード</label>
+                    <input id="staff-password" name="staffPassword" type="password"
+                        autocomplete="off">
+                    <small class="field-help">管理者から共有されたパスワードを入力してください。</small>
+                </div>
+                <button class="primary-button full-width" type="submit" disabled>アカウントを作成</button>
+            </form>
+        </section>
+    </main>
+
+    <div class="app-shell" id="app-view" hidden>
+        <header class="site-header">
+            <div class="header-inner">
+                <a class="brand" href="#" id="home-link" aria-label="2D 学級総合 カレンダー">
+                    <span class="brand-mark" aria-hidden="true">S</span>
+                    <span class="brand-copy">
+                        <strong>2D 学級総合</strong>
+                        <small>SCHOOL INFORMATION</small>
+                    </span>
+                </a>
+                <nav aria-label="メインナビゲーション">
+                    <button class="nav-button active" type="button" data-view="calendar-page" aria-current="page">
+                        カレンダー
+                    </button>
+                    <button class="nav-button" type="button" data-view="activity-page">
+                        グループ活動
+                    </button>
+                    <button class="nav-button" type="button" data-view="admin-page" id="admin-nav" hidden>
+                        総合係　管理者設定
+                    </button>
+                </nav>
+                <div class="account-menu">
+                    <span class="user-badge" id="user-badge"></span>
+                    <button class="text-button" type="button" id="logout-button">ログアウト</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="page-shell">
+            <section class="page calendar-page" id="calendar-page" aria-labelledby="calendar-title">
+                <section class="calendar-panel" aria-label="月間カレンダー">
+                    <div class="calendar-toolbar">
+                        <div class="calendar-title">
+                            <p class="eyebrow">SCHOOL CALENDAR</p>
+                            <h1 id="calendar-title">カレンダー</h1>
+                        </div>
+                        <div class="month-navigation">
+                            <button class="icon-button" type="button" data-month-step="-1" aria-label="前の月">‹</button>
+                            <h2 id="month-label" aria-live="polite"></h2>
+                            <button class="icon-button" type="button" data-month-step="1" aria-label="次の月">›</button>
+                        </div>
+                        <button class="today-button" type="button" id="today-button">今月</button>
+                    </div>
+                    <div class="weekday-row" aria-hidden="true">
+                        <span>日</span><span>月</span><span>火</span><span>水</span>
+                        <span>木</span><span>金</span><span>土</span>
+                    </div>
+                    <div class="calendar-grid" id="calendar-grid" role="grid" aria-labelledby="month-label"></div>
+                    <div class="calendar-legend">
+                        <span><i class="legend-dot outing-dot"></i>外出可能日・総合の授業がある日</span>
+                        <span><i class="legend-dot deadline-dot"></i>提出期限</span>
+                        <span><i class="legend-dot plan-dot"></i>外出予定</span>
+                    </div>
+                    <p class="status calendar-status" id="calendar-status" role="status" aria-live="polite"></p>
+                </section>
+            </section>
+
+            <section class="page activity-page" id="activity-page" aria-labelledby="activity-title" hidden>
+                <div class="page-heading">
+                    <div>
+                        <p class="eyebrow">GROUP ACTIVITY</p>
+                        <h1 id="activity-title">グループ活動</h1>
+                        <p class="page-description" id="activity-description"></p>
+                    </div>
+                </div>
+                <section class="panel">
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">DEADLINES</p>
+                            <h2>提出期限・完了報告</h2>
+                        </div>
+                    </div>
+                    <ul class="activity-list" id="activity-list"></ul>
+                </section>
+                <section class="panel activity-panel">
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">OUTING PLANS</p>
+                            <h2>外出予定</h2>
+                        </div>
+                    </div>
+                    <ul class="activity-list" id="outing-list"></ul>
+                </section>
+            </section>
+
+            <section class="page admin-page" id="admin-page" aria-labelledby="admin-title" hidden>
+                <div class="page-heading">
+                    <div>
+                        <p class="eyebrow">STAFF SETTINGS</p>
+                        <h1 id="admin-title">総合係設定</h1>
+                        <p class="page-description">グループ・所属利用者・外出可能日・提出期限を管理します。</p>
+                    </div>
+                </div>
+                <div class="admin-grid">
+                    <section class="panel">
+                        <div class="section-heading">
+                            <div>
+                                <p class="eyebrow">GROUPS</p>
+                                <h2>グループを管理</h2>
+                            </div>
+                        </div>
+                        <form id="group-admin-form" class="stacked-form">
+                            <div class="form-field">
+                                <label for="group-name">新しいグループ名</label>
+                                <input id="group-name" name="name" maxlength="30"
+                                    placeholder="例：D班" required>
+                            </div>
+                            <button class="primary-button" type="submit">グループを追加</button>
+                        </form>
+                        <ul class="activity-list compact-list" id="admin-group-list"></ul>
+                    </section>
+                    <section class="panel">
+                        <div class="section-heading">
+                            <div>
+                                <p class="eyebrow">MEMBERS</p>
+                                <h2>所属グループを指定</h2>
+                            </div>
+                        </div>
+                        <p class="form-hint">利用者は登録時に選択できます。ここから総合係が変更できます。</p>
+                        <ul class="activity-list" id="admin-user-list"></ul>
+                    </section>
+                </div>
+                <div class="admin-grid">
+                    <section class="panel">
+                        <div class="section-heading">
+                            <div>
+                                <p class="eyebrow">OUTING DAYS</p>
+                                <h2>外出可能日を設定</h2>
+                            </div>
+                        </div>
+                        <form id="outing-day-admin-form" class="stacked-form">
+                            <div class="form-field">
+                                <label for="outing-day-date">日付</label>
+                                <input type="date" id="outing-day-date" name="date" required>
+                            </div>
+                            <div class="form-field">
+                                <label for="outing-day-title">予定名</label>
+                                <input id="outing-day-title" name="title" value="外出可能日" maxlength="120" required>
+                            </div>
+                            <button class="primary-button" type="submit">日を登録</button>
+                        </form>
+                    </section>
+                    <section class="panel">
+                        <div class="section-heading">
+                            <div>
+                                <p class="eyebrow">GROUP DEADLINES</p>
+                                <h2>提出期限を設定</h2>
+                            </div>
+                        </div>
+                        <form id="deadline-admin-form" class="stacked-form">
+                            <div class="form-field">
+                                <label for="deadline-date">提出期限</label>
+                                <input type="date" id="deadline-date" name="date" required>
+                            </div>
+                            <div class="form-field">
+                                <label for="deadline-group">対象グループ</label>
+                                <select id="deadline-group" name="groupName" required>
+                                    <option value="" selected disabled>グループを選択</option>
+                                </select>
+                            </div>
+                            <div class="form-field">
+                                <label for="deadline-title">書類・予定名</label>
+                                <input id="deadline-title" name="title" maxlength="120" required>
+                            </div>
+                            <button class="primary-button" type="submit">期限を登録</button>
+                        </form>
+                    </section>
+                </div>
+                <p class="status" id="admin-status" role="status" aria-live="polite"></p>
+                <section class="panel">
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">MANAGED SCHEDULE</p>
+                            <h2>登録済みの予定</h2>
+                        </div>
+                    </div>
+                    <ul class="activity-list" id="admin-event-list"></ul>
+                </section>
+                <section class="panel activity-panel">
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">COMPLETION UPDATES</p>
+                            <h2>グループの完了報告</h2>
+                        </div>
+                    </div>
+                    <ul class="activity-list" id="staff-update-list"></ul>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    <dialog class="day-dialog" id="day-dialog" aria-labelledby="dialog-date">
+        <div class="dialog-header">
+            <div>
+                <p class="eyebrow">SCHEDULE DETAILS</p>
+                <h2 id="dialog-date"></h2>
+            </div>
+            <button class="icon-button" type="button" id="close-day-dialog" aria-label="閉じる">×</button>
+        </div>
+        <ul class="day-event-list" id="day-event-list"></ul>
+        <section class="dialog-outing-section" id="outing-form-section" hidden>
+            <h3>この日に外出予定を作成</h3>
+            <form id="outing-form" class="stacked-form">
+                <input type="hidden" name="date" id="outing-date">
+                <p class="form-hint">所属グループ：<strong id="outing-group"></strong></p>
+                <div class="form-field">
+                    <label for="outing-description">行き先・用件</label>
+                    <textarea id="outing-description" name="description" rows="3" maxlength="300"
+                        placeholder="外出の予定を入力してください" required></textarea>
+                </div>
+                <button class="primary-button" type="submit">外出予定を登録</button>
+            </form>
+        </section>
+        <p class="status" id="dialog-status" role="status" aria-live="polite"></p>
+    </dialog>
+</body>
+</html>
