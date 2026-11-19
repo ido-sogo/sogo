@@ -82,3 +82,51 @@ GRANT EXECUTE ON FUNCTION public.consume_auth_attempt(text, integer, integer)
     TO service_role;
 GRANT EXECUTE ON FUNCTION public.clear_auth_attempts(text)
     TO service_role;
+
+CREATE OR REPLACE FUNCTION public.move_group_and_delete(
+    p_source_name text,
+    p_target_name text
+)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path = ''
+AS $function$
+BEGIN
+    IF p_source_name IS NULL
+        OR p_target_name IS NULL
+        OR p_source_name = p_target_name THEN
+        RAISE EXCEPTION 'Choose a different destination group.'
+            USING ERRCODE = '22023';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM public.groups WHERE name = p_source_name) THEN
+        RAISE EXCEPTION 'Source group not found.'
+            USING ERRCODE = 'P0002';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM public.groups WHERE name = p_target_name) THEN
+        RAISE EXCEPTION 'Destination group not found.'
+            USING ERRCODE = 'P0002';
+    END IF;
+
+    UPDATE public.users
+    SET group_name = p_target_name
+    WHERE group_name = p_source_name;
+
+    UPDATE public.calendar_items
+    SET group_name = p_target_name
+    WHERE group_name = p_source_name;
+
+    UPDATE public.outings
+    SET group_name = p_target_name
+    WHERE group_name = p_source_name;
+
+    DELETE FROM public.groups
+    WHERE name = p_source_name;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.move_group_and_delete(text, text)
+    FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.move_group_and_delete(text, text)
+    TO service_role;

@@ -379,6 +379,12 @@ nav {
     padding-bottom: 21px;
 }
 
+.calendar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .calendar-title .eyebrow {
     margin-bottom: 5px;
 }
@@ -518,6 +524,10 @@ nav {
     white-space: nowrap;
 }
 
+.calendar-event-print-only {
+    display: none;
+}
+
 .calendar-event.deadline {
     color: #855847;
     background: #f7eee8;
@@ -573,6 +583,26 @@ nav {
 
 .calendar-status {
     margin-top: 12px;
+}
+
+.calendar-print-link-row {
+    margin-top: 8px;
+    text-align: right;
+}
+
+.print-link {
+    padding: 2px 0;
+    color: #718078;
+    background: none;
+    border: 0;
+    font-size: 0.72rem;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+.print-link:hover {
+    color: var(--forest);
 }
 
 .primary-button {
@@ -833,6 +863,20 @@ textarea::placeholder {
     box-shadow: 0 24px 70px rgb(20 40 30 / 24%);
 }
 
+.edit-dialog {
+    padding-bottom: 20px;
+}
+
+.edit-dialog-form {
+    padding: 20px 24px 0;
+}
+
+.dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
 .day-dialog::backdrop {
     background: rgb(18 36 28 / 48%);
     backdrop-filter: blur(3px);
@@ -977,6 +1021,11 @@ textarea::placeholder {
     }
 
     .today-button {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    .calendar-actions {
         grid-column: 2;
         grid-row: 1;
     }
@@ -1202,5 +1251,142 @@ textarea::placeholder {
     *::after {
         scroll-behavior: auto !important;
         transition-duration: 0.01ms !important;
+    }
+}
+
+@page {
+    size: landscape;
+    margin: 8mm;
+}
+
+@media print {
+    *,
+    *::before,
+    *::after {
+        color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    body {
+        min-width: 0;
+        min-height: 0;
+        background: #fff;
+    }
+
+    .site-header,
+    .calendar-title .eyebrow,
+    .month-navigation .icon-button,
+    .calendar-actions,
+    .calendar-print-link-row,
+    .calendar-status,
+    .day-dialog,
+    .site-footer {
+        display: none !important;
+    }
+
+    .page-shell,
+    .page.calendar-page,
+    .calendar-panel {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .page-shell {
+        max-width: none;
+    }
+
+    .calendar-toolbar {
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        padding-bottom: 8px;
+    }
+
+    .calendar-title h1 {
+        font-size: 13pt;
+    }
+
+    .month-navigation h2 {
+        min-width: 0;
+        color: #183c32;
+        font-size: 16pt;
+    }
+
+    .weekday-row,
+    .calendar-grid {
+        gap: 2px;
+    }
+
+    .weekday-row {
+        padding-bottom: 4px;
+        color: #23352f;
+        font-size: 9pt;
+    }
+
+    .calendar-day,
+    .calendar-empty {
+        min-height: 25mm;
+        padding: 2mm;
+        border-color: #b9c3ba;
+        border-radius: 0;
+        break-inside: avoid;
+    }
+
+    .calendar-day {
+        gap: 2px;
+        color: #23352f;
+        background: #fff;
+    }
+
+    .calendar-day.is-today .date-number {
+        color: #23352f;
+        background: #e2edda;
+    }
+
+    .date-number {
+        width: auto;
+        height: auto;
+        justify-content: start;
+        font-size: 9pt;
+    }
+
+    .calendar-event-markers {
+        gap: 1mm;
+    }
+
+    .calendar-event,
+    .calendar-event-print-only {
+        display: block;
+        overflow: visible;
+        padding: 0.6mm 1mm;
+        color: #23352f;
+        border-radius: 1mm;
+        font-size: 7pt;
+        line-height: 1.25;
+        text-overflow: clip;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .calendar-event.deadline {
+        color: #543c30;
+    }
+
+    .calendar-event.outing {
+        color: #33475b;
+    }
+
+    .more-events {
+        display: none;
+    }
+
+    .calendar-legend {
+        gap: 3mm 8mm;
+        padding-top: 5mm;
+        color: #23352f;
+        font-size: 8pt;
     }
 }

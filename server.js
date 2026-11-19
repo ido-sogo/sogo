@@ -255,6 +255,13 @@ async function handleApi(request, response, url) {
     }
 
     const outingMatch = pathname.match(/^\/api\/outings\/(\d+)$/);
+    if (outingMatch && method === 'PATCH') {
+        await requireStaff(request);
+        const body = await readJson(request);
+        await updateOuting(Number(outingMatch[1]), body);
+        sendJson(response, 200, { ok: true });
+        return;
+    }
     if (outingMatch && method === 'DELETE') {
         await deleteOuting(await requireUser(request), Number(outingMatch[1]));
         sendJson(response, 200, { ok: true });
@@ -262,6 +269,13 @@ async function handleApi(request, response, url) {
     }
 
     const itemMatch = pathname.match(/^\/api\/calendar-items\/(\d+)$/);
+    if (itemMatch && method === 'PATCH') {
+        await requireStaff(request);
+        const body = await readJson(request);
+        const event = await updateCalendarItem(Number(itemMatch[1]), body);
+        sendJson(response, 200, { event });
+        return;
+    }
     if (itemMatch && method === 'DELETE') {
         await deleteCalendarItem(await requireStaff(request), Number(itemMatch[1]));
         sendJson(response, 200, { ok: true });
@@ -393,7 +407,8 @@ async function getCalendarData(user) {
             userId: outing.user_id,
             username: usersById.get(outing.user_id).username,
             groupName: outing.group_name,
-            description: outing.description
+            description: outing.description,
+            createdAt: outing.created_at
         }))
     };
 }
@@ -425,6 +440,47 @@ async function createCalendarItem(user, body) {
         created_by: user.id
     }).select('*').single());
     return publicCalendarItem(item);
+}
+
+async function updateCalendarItem(eventId, body) {
+    const current = await queryDatabase(
+        supabase.from('calendar_items').select('*').eq('id', eventId).maybeSingle()
+    );
+    if (!current) {
+        throw new HttpError(404, '予定が見つかりません。');
+    }
+
+    const date = validateDate(body.date);
+    const title = validateText(body.title, '予定名', 120);
+    let groupName = null;
+    if (current.type === 'deadline') {
+        const selectedGroupName = validateGroupName(body.groupName);
+        const group = await queryDatabase(
+            supabase.from('groups').select('name').eq('name', selectedGroupName).maybeSingle()
+        );
+        if (!group) {
+            throw new HttpError(400, '提出期限の対象グループを選択してください。');
+        }
+        groupName = group.name;
+    }
+
+    if (current.type === 'outing_day' && date !== current.date) {
+        const outings = await queryDatabase(
+            supabase.from('outings').select('id').eq('date', current.date).limit(1)
+        );
+        if (outings.length > 0) {
+            throw new HttpError(409, 'この日に外出予定があるため、先に外出予定を変更または削除してください。');
+        }
+    }
+
+    const updated = await queryDatabase(
+        supabase.from('calendar_items')
+            .update({ date, group_name: groupName, title })
+            .eq('id', eventId)
+            .select('*')
+            .single()
+    );
+    return publicCalendarItem(updated);
 }
 
 async function createGroup(value) {
@@ -542,26 +598,60 @@ async function createOuting(user, body) {
         user_id: user.id,
         group_name: user.group_name,
         description
-    }).select('id').single());
+    }).select('id, created_at').single());
     return {
         id: outing.id,
         date,
         userId: user.id,
         username: user.username,
         groupName: user.group_name,
-        description
+        description,
+        createdAt: outing.created_at
     };
+}
+
+async function updateOuting(outingId, body) {
+    const current = await queryDatabase(
+        supabase.from('outings').select('id').eq('id', outingId).maybeSingle()
+    );
+    if (!current) {
+        throw new HttpError(404, '外出予定が見つかりません。');
+    }
+
+    const date = validateDate(body.date);
+    if (date < localDateString()) {
+        throw new HttpError(400, '過去の日付には外出予定を変更できません。');
+    }
+    const availableDay = await queryDatabase(
+        supabase.from('calendar_items').select('id')
+            .eq('type', 'outing_day').eq('date', date).limit(1).maybeSingle()
+    );
+    if (!availableDay) {
+        throw new HttpError(400, '総合係が設定した外出可能日を選んでください。');
+    }
+
+    const description = validateText(body.description, '外出予定', 300);
+    await queryDatabase(
+        supabase.from('outings').update({ date, description }).eq('id', outingId)
+    );
 }
 
 async function deleteOuting(user, outingId) {
     const outing = await queryDatabase(
-        supabase.from('outings').select('user_id').eq('id', outingId).maybeSingle()
+        supabase.from('outings').select('user_id, group_name, created_at')
+            .eq('id', outingId).maybeSingle()
     );
     if (!outing) {
         throw new HttpError(404, '外出予定が見つかりません。');
     }
-    if (user.role !== 'staff' && outing.user_id !== user.id) {
-        throw new HttpError(403, '自分の外出予定だけ削除できます。');
+    if (user.role !== 'staff') {
+        if (outing.group_name !== user.group_name) {
+            throw new HttpError(403, '自分のグループの外出予定だけ削除できます。');
+        }
+        const age = Date.now() - Date.parse(outing.created_at);
+        if (!Number.isFinite(age) || age < 0 || age > 30 * 60 * 1000) {
+            throw new HttpError(403, '投稿から30分を過ぎた外出予定は削除できません。総合係に依頼してください。');
+        }
     }
     await queryDatabase(supabase.from('outings').delete().eq('id', outingId));
 }

@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const calendarGrid = document.getElementById('calendar-grid');
     const monthLabel = document.getElementById('month-label');
     const calendarStatus = document.getElementById('calendar-status');
+    const activityStatus = document.getElementById('activity-status');
     const activityList = document.getElementById('activity-list');
     const outingList = document.getElementById('outing-list');
     const adminEventList = document.getElementById('admin-event-list');
@@ -42,6 +43,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const dayDialog = document.getElementById('day-dialog');
     const dayEventList = document.getElementById('day-event-list');
     const dialogStatus = document.getElementById('dialog-status');
+    const calendarItemEditDialog = document.getElementById('calendar-item-edit-dialog');
+    const calendarItemEditForm = document.getElementById('calendar-item-edit-form');
+    const outingEditDialog = document.getElementById('outing-edit-dialog');
+    const outingEditForm = document.getElementById('outing-edit-form');
     const outingFormSection = document.getElementById('outing-form-section');
     const outingForm = document.getElementById('outing-form');
     const outingDate = document.getElementById('outing-date');
@@ -53,6 +58,16 @@ document.addEventListener('DOMContentLoaded', () => {
     registerTab.addEventListener('click', () => setAuthTab('register'));
     registerRole.addEventListener('change', updateRegistrationFields);
     document.getElementById('close-day-dialog').addEventListener('click', () => dayDialog.close());
+    document.getElementById('close-calendar-item-edit').addEventListener(
+        'click',
+        () => calendarItemEditDialog.close()
+    );
+    document.getElementById('cancel-calendar-item-edit').addEventListener(
+        'click',
+        () => calendarItemEditDialog.close()
+    );
+    document.getElementById('close-outing-edit').addEventListener('click', () => outingEditDialog.close());
+    document.getElementById('cancel-outing-edit').addEventListener('click', () => outingEditDialog.close());
     document.getElementById('logout-button').addEventListener('click', logout);
     document.getElementById('home-link').addEventListener('click', (event) => {
         event.preventDefault();
@@ -107,6 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.displayedMonth = new Date(today.getFullYear(), today.getMonth(), 1);
         renderCalendar();
     });
+    document.getElementById('print-calendar-button').addEventListener('click', () => window.print());
 
     calendarGrid.addEventListener('click', (event) => {
         if (!(event.target instanceof Element)) {
@@ -146,6 +162,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!(event.target instanceof Element)) {
             return;
         }
+        const editButton = event.target.closest('button[data-edit-outing-id]');
+        if (editButton) {
+            openOutingEdit(Number(editButton.dataset.editOutingId));
+            return;
+        }
         const button = event.target.closest('button[data-outing-id]');
         if (!button) {
             return;
@@ -157,6 +178,72 @@ document.addEventListener('DOMContentLoaded', () => {
             showStatus(dialogStatus, '外出予定を削除しました。');
         } catch (error) {
             showStatus(dialogStatus, error.message, true);
+        }
+    });
+
+    outingList.addEventListener('click', async (event) => {
+        if (!(event.target instanceof Element)) {
+            return;
+        }
+        const editButton = event.target.closest('button[data-edit-outing-id]');
+        if (editButton) {
+            openOutingEdit(Number(editButton.dataset.editOutingId));
+            return;
+        }
+        const button = event.target.closest('button[data-outing-id]');
+        if (!button) {
+            return;
+        }
+        try {
+            await request(`/api/outings/${button.dataset.outingId}`, 'DELETE');
+            await refreshData();
+            showStatus(activityStatus, '外出予定を削除しました。');
+        } catch (error) {
+            showStatus(activityStatus, error.message, true);
+        }
+    });
+
+    calendarItemEditForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData(calendarItemEditForm);
+        const itemId = formData.get('itemId');
+        try {
+            await request(`/api/calendar-items/${itemId}`, 'PATCH', {
+                date: formData.get('date'),
+                groupName: calendarItemEditForm.dataset.itemType === 'deadline'
+                    ? formData.get('groupName')
+                    : null,
+                title: formData.get('title')
+            });
+            calendarItemEditDialog.close();
+            await refreshData();
+            showStatus(document.getElementById('admin-status'), '予定を変更しました。');
+        } catch (error) {
+            showStatus(document.getElementById('calendar-item-edit-status'), error.message, true);
+        }
+    });
+
+    outingEditForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData(outingEditForm);
+        const outingId = formData.get('outingId');
+        try {
+            await request(`/api/outings/${outingId}`, 'PATCH', {
+                date: formData.get('date'),
+                description: formData.get('description')
+            });
+            const returnToDayDialog = dayDialog.open;
+            outingEditDialog.close();
+            await refreshData();
+            if (returnToDayDialog) {
+                renderDayDialog(state.selectedDate);
+            }
+            showStatus(
+                returnToDayDialog ? dialogStatus : activityStatus,
+                '外出予定を変更しました。'
+            );
+        } catch (error) {
+            showStatus(document.getElementById('outing-edit-status'), error.message, true);
         }
     });
 
@@ -277,6 +364,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!(event.target instanceof Element)) {
             return;
         }
+        const editButton = event.target.closest('button[data-edit-item-id]');
+        if (editButton) {
+            openCalendarItemEdit(Number(editButton.dataset.editItemId));
+            return;
+        }
         const button = event.target.closest('button[data-item-id]');
         if (!button) {
             return;
@@ -299,6 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.config = config;
         populateGroupSelect(registerGroup, config.groups);
         populateGroupSelect(document.getElementById('deadline-group'), config.groups);
+        populateGroupSelect(document.getElementById('calendar-item-edit-group'), config.groups);
         const databaseConfigured = config.databaseConfigured;
         document.getElementById('database-setup-notice').hidden = databaseConfigured;
         document.querySelectorAll('.auth-form button[type="submit"]')
@@ -419,9 +512,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (events.length > 0) {
                 const markers = document.createElement('span');
                 markers.className = 'calendar-event-markers';
-                for (const item of events.slice(0, 2)) {
+                for (const [index, item] of events.entries()) {
                     const marker = document.createElement('span');
-                    marker.className = `calendar-event ${eventClass(item)}`;
+                    marker.className = `calendar-event ${eventClass(item)}${index >= 2 ? ' calendar-event-print-only' : ''}`;
                     marker.textContent = calendarEventTitle(item);
                     markers.append(marker);
                 }
@@ -492,13 +585,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 description.className = 'activity-note';
                 description.textContent = item.description;
                 listItem.append(description);
-                if (state.user.role === 'staff' || item.userId === state.user.id) {
+                const actions = document.createElement('div');
+                actions.className = 'activity-actions';
+                if (state.user.role === 'staff') {
+                    const edit = document.createElement('button');
+                    edit.type = 'button';
+                    edit.className = 'inline-button';
+                    edit.dataset.editOutingId = String(item.id);
+                    edit.textContent = '変更';
+                    actions.append(edit);
+                }
+                if (canDeleteOuting(item)) {
                     const remove = document.createElement('button');
                     remove.type = 'button';
                     remove.className = 'delete-button';
                     remove.dataset.outingId = String(item.id);
                     remove.textContent = '外出予定を削除';
-                    listItem.append(remove);
+                    actions.append(remove);
+                }
+                if (actions.childElementCount > 0) {
+                    listItem.append(actions);
                 }
             }
             dayEventList.append(listItem);
@@ -571,21 +677,26 @@ document.addEventListener('DOMContentLoaded', () => {
             description.textContent = outing.description;
             details.append(meta, description);
             header.append(details);
-            if (state.user.role === 'staff' || outing.userId === state.user.id) {
+            const actions = document.createElement('div');
+            actions.className = 'activity-actions';
+            if (state.user.role === 'staff') {
+                const edit = document.createElement('button');
+                edit.type = 'button';
+                edit.className = 'inline-button';
+                edit.dataset.editOutingId = String(outing.id);
+                edit.textContent = '変更';
+                actions.append(edit);
+            }
+            if (canDeleteOuting(outing)) {
                 const remove = document.createElement('button');
                 remove.type = 'button';
                 remove.className = 'delete-button';
                 remove.dataset.outingId = String(outing.id);
                 remove.textContent = '削除';
-                remove.addEventListener('click', async () => {
-                    try {
-                        await request(`/api/outings/${outing.id}`, 'DELETE');
-                        await refreshData();
-                    } catch (error) {
-                        showStatus(calendarStatus, error.message, true);
-                    }
-                });
-                header.append(remove);
+                actions.append(remove);
+            }
+            if (actions.childElementCount > 0) {
+                header.append(actions);
             }
             card.append(header);
             return card;
@@ -668,12 +779,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderEmptyOrList(adminEventList, state.events, (item) => {
             const card = createActivityCard(item, eventMeta(item), '');
+            const actions = document.createElement('div');
+            actions.className = 'activity-actions';
+            const edit = document.createElement('button');
+            edit.type = 'button';
+            edit.className = 'inline-button';
+            edit.dataset.editItemId = String(item.id);
+            edit.textContent = '変更';
             const remove = document.createElement('button');
             remove.type = 'button';
             remove.className = 'delete-button';
             remove.dataset.itemId = String(item.id);
             remove.textContent = '削除';
-            card.querySelector('.activity-item-header').append(remove);
+            actions.append(edit, remove);
+            card.append(actions);
             return card;
         }, '予定はまだ設定されていません。');
 
@@ -814,6 +933,52 @@ document.addEventListener('DOMContentLoaded', () => {
         state.config = await request('/api/config');
         populateGroupSelect(registerGroup, state.config.groups);
         populateGroupSelect(document.getElementById('deadline-group'), state.config.groups);
+        populateGroupSelect(document.getElementById('calendar-item-edit-group'), state.config.groups);
+    }
+
+    function openCalendarItemEdit(itemId) {
+        const item = state.events.find((event) => event.id === itemId);
+        if (!item) {
+            return;
+        }
+        calendarItemEditForm.elements.namedItem('itemId').value = String(item.id);
+        calendarItemEditForm.elements.namedItem('date').value = item.date;
+        calendarItemEditForm.elements.namedItem('title').value = item.title;
+        calendarItemEditForm.dataset.itemType = item.type;
+        const groupField = document.getElementById('calendar-item-edit-group-field');
+        const groupSelect = document.getElementById('calendar-item-edit-group');
+        groupField.hidden = item.type !== 'deadline';
+        groupSelect.required = item.type === 'deadline';
+        groupSelect.value = item.groupName || '';
+        showStatus(document.getElementById('calendar-item-edit-status'), '');
+        calendarItemEditDialog.showModal();
+    }
+
+    function openOutingEdit(outingId) {
+        if (state.user.role !== 'staff') {
+            return;
+        }
+        const outing = state.outings.find((item) => item.id === outingId);
+        if (!outing) {
+            return;
+        }
+        outingEditForm.elements.namedItem('outingId').value = String(outing.id);
+        outingEditForm.elements.namedItem('date').value = outing.date;
+        outingEditForm.elements.namedItem('description').value = outing.description;
+        showStatus(document.getElementById('outing-edit-status'), '');
+        outingEditDialog.showModal();
+    }
+
+    function canDeleteOuting(outing) {
+        if (state.user.role === 'staff') {
+            return true;
+        }
+        if (outing.groupName !== state.user.group) {
+            return false;
+        }
+        const createdAt = Date.parse(outing.createdAt);
+        const age = Date.now() - createdAt;
+        return Number.isFinite(createdAt) && age >= 0 && age <= 30 * 60 * 1000;
     }
 
     async function request(url, method = 'GET', body) {

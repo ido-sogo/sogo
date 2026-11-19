@@ -140,7 +140,9 @@
                             <h2 id="month-label" aria-live="polite"></h2>
                             <button class="icon-button" type="button" data-month-step="1" aria-label="次の月">›</button>
                         </div>
-                        <button class="today-button" type="button" id="today-button">今月</button>
+                        <div class="calendar-actions">
+                            <button class="today-button" type="button" id="today-button">今月</button>
+                        </div>
                     </div>
                     <div class="weekday-row" aria-hidden="true">
                         <span>日</span><span>月</span><span>火</span><span>水</span>
@@ -153,6 +155,11 @@
                         <span><i class="legend-dot plan-dot"></i>外出予定</span>
                     </div>
                     <p class="status calendar-status" id="calendar-status" role="status" aria-live="polite"></p>
+                    <div class="calendar-print-link-row">
+                        <button class="print-link" type="button" id="print-calendar-button">
+                            カレンダーを印刷
+                        </button>
+                    </div>
                 </section>
             </section>
 
@@ -181,6 +188,7 @@
                         </div>
                     </div>
                     <ul class="activity-list" id="outing-list"></ul>
+                    <p class="status" id="activity-status" role="status" aria-live="polite"></p>
                 </section>
             </section>
 
@@ -313,6 +321,58 @@
             </form>
         </section>
         <p class="status" id="dialog-status" role="status" aria-live="polite"></p>
+    </dialog>
+
+    <dialog class="day-dialog edit-dialog" id="calendar-item-edit-dialog" aria-labelledby="calendar-item-edit-title">
+        <div class="dialog-header">
+            <h2 id="calendar-item-edit-title">カレンダー予定を変更</h2>
+            <button class="icon-button" type="button" id="close-calendar-item-edit" aria-label="閉じる">×</button>
+        </div>
+        <form id="calendar-item-edit-form" class="stacked-form edit-dialog-form">
+            <input type="hidden" name="itemId">
+            <div class="form-field">
+                <label for="calendar-item-edit-date">日付</label>
+                <input type="date" id="calendar-item-edit-date" name="date" required>
+            </div>
+            <div class="form-field" id="calendar-item-edit-group-field">
+                <label for="calendar-item-edit-group">対象グループ</label>
+                <select id="calendar-item-edit-group" name="groupName">
+                    <option value="" selected disabled>グループを選択</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label for="calendar-item-edit-title-input">予定名</label>
+                <input id="calendar-item-edit-title-input" name="title" maxlength="120" required>
+            </div>
+            <p class="status" id="calendar-item-edit-status" role="status" aria-live="polite"></p>
+            <div class="dialog-actions">
+                <button class="secondary-button" type="button" id="cancel-calendar-item-edit">キャンセル</button>
+                <button class="primary-button" type="submit">変更を保存</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog class="day-dialog edit-dialog" id="outing-edit-dialog" aria-labelledby="outing-edit-title">
+        <div class="dialog-header">
+            <h2 id="outing-edit-title">外出予定を変更</h2>
+            <button class="icon-button" type="button" id="close-outing-edit" aria-label="閉じる">×</button>
+        </div>
+        <form id="outing-edit-form" class="stacked-form edit-dialog-form">
+            <input type="hidden" name="outingId">
+            <div class="form-field">
+                <label for="outing-edit-date">日付</label>
+                <input type="date" id="outing-edit-date" name="date" required>
+            </div>
+            <div class="form-field">
+                <label for="outing-edit-description">行き先・用件</label>
+                <textarea id="outing-edit-description" name="description" rows="3" maxlength="300" required></textarea>
+            </div>
+            <p class="status" id="outing-edit-status" role="status" aria-live="polite"></p>
+            <div class="dialog-actions">
+                <button class="secondary-button" type="button" id="cancel-outing-edit">キャンセル</button>
+                <button class="primary-button" type="submit">変更を保存</button>
+            </div>
+        </form>
     </dialog>
 </body>
 </html>
